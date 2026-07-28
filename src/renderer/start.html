@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>New Tab</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1e1e1e;
+      font-family: sans-serif;
+    }
+    #center {
+      text-align: center;
+    }
+    h1 {
+      color: #eee;
+      font-weight: 300;
+      font-size: 32px;
+      margin-bottom: 24px;
+    }
+    #search {
+      width: 400px;
+      height: 44px;
+      font-size: 15px;
+      padding: 0 16px;
+      border-radius: 22px;
+      border: none;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="center">
+    <h1>Browser</h1>
+    <input id="search" type="text" placeholder="Search or enter address" autofocus />
+  </div>
+  <script>
+    const input = document.getElementById('search');
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        let value = input.value.trim();
+        let url;
+        if (value.includes('.') && !value.includes(' ')) {
+          url = value.startsWith('http') ? value : 'https://' + value;
+        } else {
+          url = 'https://www.google.com/search?q=' + encodeURIComponent(value);
+        }
+        window.location.href = url;
+      }
+    });
+  </script>
+</body>
+</html>

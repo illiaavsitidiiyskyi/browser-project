@@ -6,14 +6,20 @@ let activeViewIndex = 0;
 
 const TOOLBAR_HEIGHT = 80;
 
-function createTab(url: string = 'https://www.google.com') {
+function createTab(url: string = 'src/renderer/start.html') {
   const view = new BrowserView();
   views.push(view);
   activeViewIndex = views.length - 1;
 
-  view.webContents.loadURL(url);
+  if (url.endsWith('.html')) {
+    view.webContents.loadFile(url);
+  } else {
+    view.webContents.loadURL(url);
+  }
+
   mainWindow.setBrowserView(view);
   resizeActiveView();
+  
 
   view.webContents.on('did-navigate', () => {
     sendTabsUpdate();
@@ -57,11 +63,16 @@ function closeTab(index: number) {
 }
 
 function sendTabsUpdate() {
-  const tabs = views.map((v, i) => ({
-    index: i,
-    url: v.webContents.getURL(),
-    active: i === activeViewIndex
-  }));
+  const tabs = views.map((v, i) => {
+    const rawUrl = v.webContents.getURL();
+    const isStartPage = rawUrl.includes('start.html');
+    return {
+      index: i,
+      url: isStartPage ? '' : rawUrl,
+      title: isStartPage ? 'New Tab' : rawUrl,
+      active: i === activeViewIndex
+    };
+  });
   mainWindow.webContents.send('tabs-updated', tabs);
 }
 

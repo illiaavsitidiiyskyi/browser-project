@@ -94,27 +94,27 @@
     });
 
     window.browserAPI.onTabsUpdated((tabs) => {
-      document.querySelectorAll('.tab').forEach(el => el.remove());
+  document.querySelectorAll('.tab').forEach(el => el.remove());
 
-      tabs.forEach(tab => {
-        const el = document.createElement('div');
-        el.className = 'tab' + (tab.active ? ' active' : '');
-        el.innerHTML = `<span class="title">${tab.url || 'New Tab'}</span><span class="close">x</span>`;
+  tabs.forEach(tab => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.active ? ' active' : '');
+    el.innerHTML = `<span class="title">${tab.title}</span><span class="close">x</span>`;
 
-        el.querySelector('.title').addEventListener('click', () => {
-          window.browserAPI.switchTab(tab.index);
-        });
-
-        el.querySelector('.close').addEventListener('click', (e) => {
-          e.stopPropagation();
-          window.browserAPI.closeTab(tab.index);
-        });
-
-        if (tab.active) address.value = tab.url;
-
-        tabbar.insertBefore(el, newTabBtn);
-      });
+    el.querySelector('.title').addEventListener('click', () => {
+      window.browserAPI.switchTab(tab.index);
     });
+
+    el.querySelector('.close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.browserAPI.closeTab(tab.index);
+    });
+
+    if (tab.active) address.value = tab.url;
+
+    tabbar.insertBefore(el, newTabBtn);
+  });
+});
   </script>
 </body>
 </html>
