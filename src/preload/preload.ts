@@ -8,7 +8,11 @@ contextBridge.exposeInMainWorld('browserAPI', {
   goBack: () => ipcRenderer.send('go-back'),
   goForward: () => ipcRenderer.send('go-forward'),
   reload: () => ipcRenderer.send('reload'),
+  getHistory: () => ipcRenderer.invoke('get-history'),
   onTabsUpdated: (callback: (tabs: any[]) => void) => {
     ipcRenderer.on('tabs-updated', (_event, tabs) => callback(tabs));
+  },
+  onHistoryUpdated: (callback: () => void) => {
+    ipcRenderer.on('history-updated', () => callback());
   }
 });

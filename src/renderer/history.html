@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>History</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      padding: 24px;
+    }
+    h1 {
+      font-weight: 300;
+    }
+    .entry {
+      padding: 10px 0;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+    }
+    .entry:hover {
+      background: #2a2a2a;
+    }
+    .entry .title {
+      font-size: 14px;
+    }
+    .entry .url {
+      font-size: 12px;
+      color: #999;
+    }
+    .entry .time {
+      font-size: 11px;
+      color: #666;
+      float: right;
+    }
+  </style>
+</head>
+<body>
+  <h1>History</h1>
+  <div id="list"></div>
+  <script>
+    function loadHistory() {
+      window.browserAPI.getHistory().then(history => {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        history.forEach(entry => {
+          const el = document.createElement('div');
+          el.className = 'entry';
+          const time = new Date(entry.timestamp).toLocaleString();
+          el.innerHTML = `
+            <span class="time">${time}</span>
+            <div class="title">${entry.title || entry.url}</div>
+            <div class="url">${entry.url}</div>
+          `;
+          el.addEventListener('click', () => {
+            window.location.href = entry.url;
+          });
+          list.appendChild(el);
+        });
+      });
+    }
+
+    loadHistory();
+    window.browserAPI.onHistoryUpdated(() => loadHistory());
+  </script>
+</body>
+</html>
