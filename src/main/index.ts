@@ -63,6 +63,18 @@ function createTab(url: string = 'src/renderer/start.html') {
     sendTabsUpdate();
   });
 
+  view.webContents.on('did-start-loading', () => {
+    if (views[activeViewIndex] === view) {
+      mainWindow.webContents.send('loading-state', true);
+    }
+  });
+
+  view.webContents.on('did-stop-loading', () => {
+    if (views[activeViewIndex] === view) {
+      mainWindow.webContents.send('loading-state', false);
+    }
+  });
+
   sendTabsUpdate();
 }
 
@@ -81,6 +93,7 @@ function switchTab(index: number) {
   mainWindow.setBrowserView(views[index]);
   resizeActiveView();
   sendTabsUpdate();
+  mainWindow.webContents.send('loading-state', views[index].webContents.isLoading());
 }
 
 function closeTab(index: number) {
@@ -173,6 +186,10 @@ function createWindow() {
 
   ipcMain.on('reload', () => {
     views[activeViewIndex].webContents.reload();
+  });
+
+  ipcMain.on('stop-loading', () => {
+    views[activeViewIndex].webContents.stop();
   });
 
   ipcMain.handle('get-history', () => {

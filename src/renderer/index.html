@@ -72,7 +72,6 @@
     <button id="back">←</button>
     <button id="forward">→</button>
     <button id="reload">⟳</button>
-
     <button id="history">☰</button>
     <input id="address" type="text" placeholder="Enter URL" />
   </div>
@@ -85,47 +84,59 @@
 
     document.getElementById('back').addEventListener('click', () => window.browserAPI.goBack());
     document.getElementById('forward').addEventListener('click', () => window.browserAPI.goForward());
-    document.getElementById('reload').addEventListener('click', () => window.browserAPI.reload());
+
+    document.getElementById('reload').addEventListener('click', () => {
+      const btn = document.getElementById('reload');
+      if (btn.textContent === '✕') {
+        window.browserAPI.stopLoading();
+      } else {
+        window.browserAPI.reload();
+      }
+    });
 
     document.getElementById('history').addEventListener('click', () => {
-  window.browserAPI.navigate('src/renderer/history.html');
-});
+      window.browserAPI.navigate('src/renderer/history.html');
+    });
 
     address.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    let value = address.value.trim();
-    let url;
-    if (value.includes('.') && !value.includes(' ')) {
-      url = value.startsWith('http') ? value : 'https://' + value;
-    } else {
-      url = 'https://www.google.com/search?q=' + encodeURIComponent(value);
-    }
-    window.browserAPI.navigate(url);
-  }
-});
+      if (e.key === 'Enter') {
+        let value = address.value.trim();
+        let url;
+        if (value.includes('.') && !value.includes(' ')) {
+          url = value.startsWith('http') ? value : 'https://' + value;
+        } else {
+          url = 'https://www.google.com/search?q=' + encodeURIComponent(value);
+        }
+        window.browserAPI.navigate(url);
+      }
+    });
 
     window.browserAPI.onTabsUpdated((tabs) => {
-  document.querySelectorAll('.tab').forEach(el => el.remove());
+      document.querySelectorAll('.tab').forEach(el => el.remove());
 
-  tabs.forEach(tab => {
-    const el = document.createElement('div');
-    el.className = 'tab' + (tab.active ? ' active' : '');
-    el.innerHTML = `<span class="title">${tab.title}</span><span class="close">x</span>`;
+      tabs.forEach(tab => {
+        const el = document.createElement('div');
+        el.className = 'tab' + (tab.active ? ' active' : '');
+        el.innerHTML = `<span class="title">${tab.title}</span><span class="close">x</span>`;
 
-    el.querySelector('.title').addEventListener('click', () => {
-      window.browserAPI.switchTab(tab.index);
+        el.querySelector('.title').addEventListener('click', () => {
+          window.browserAPI.switchTab(tab.index);
+        });
+
+        el.querySelector('.close').addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.browserAPI.closeTab(tab.index);
+        });
+
+        if (tab.active) address.value = tab.url;
+
+        tabbar.insertBefore(el, newTabBtn);
+      });
     });
 
-    el.querySelector('.close').addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.browserAPI.closeTab(tab.index);
+    window.browserAPI.onLoadingState((loading) => {
+      document.getElementById('reload').textContent = loading ? '✕' : '⟳';
     });
-
-    if (tab.active) address.value = tab.url;
-
-    tabbar.insertBefore(el, newTabBtn);
-  });
-});
   </script>
 </body>
 </html>
