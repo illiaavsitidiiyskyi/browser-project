@@ -20,6 +20,16 @@ function saveHistory() {
 
 function addHistoryEntry(url: string, title: string) {
   if (url.includes('start.html') || url.includes('history.html') || url.includes('bookmarks.html')) return;
+
+  const last = history[0];
+  const DEDUPE_WINDOW_MS = 60 * 1000;
+  if (last && last.url === url && Date.now() - last.timestamp < DEDUPE_WINDOW_MS) {
+    last.timestamp = Date.now();
+    last.title = title;
+    saveHistory();
+    return;
+  }
+
   history.unshift({ url, title, timestamp: Date.now() });
   saveHistory();
 }
