@@ -7,7 +7,11 @@
     "start": "npm run build && electron ."
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "electron": "^31.0.0"
+    "@types/node": "^26.1.2",
+    "electron": "^31.7.7",
+    "typescript": "^5.5.0"
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
   }
 }
