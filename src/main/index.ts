@@ -1,6 +1,7 @@
 import { app, BrowserView, BrowserWindow, Input, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { setupAdblock } from '../security/adblock/filter-engine';
 import { setupCertificateVerification } from '../security/certificates';
 import { createIsolatedPartition } from '../security/session-isolation';
 import { BookmarkEntry, toggleBookmark as toggleBookmarkLogic } from './bookmarks-logic';
@@ -99,7 +100,7 @@ function handleShortcut(input: Input) {
   }
 }
 
-function createTab(url?: string) {
+async function createTab(url?: string) {
   const targetUrl = url || getDefaultUrl();
   const tabId = views.length.toString();
   const view = new BrowserView({
@@ -109,9 +110,10 @@ function createTab(url?: string) {
       sandbox: true
     }
   });
-
-  setupCertificateVerification(view.webContents.session, mainWindow);
   
+  setupCertificateVerification(view.webContents.session, mainWindow);
+  await setupAdblock(view.webContents.session);
+
   views.push(view);
   activeViewIndex = views.length - 1;
 
@@ -158,8 +160,11 @@ function createTab(url?: string) {
 }
 
 function resizeActiveView() {
+  const view = views[activeViewIndex];
+  if (!view) return;
+
   const bounds = mainWindow.getBounds();
-  views[activeViewIndex].setBounds({
+  view.setBounds({
     x: 0,
     y: TOOLBAR_HEIGHT,
     width: bounds.width,
