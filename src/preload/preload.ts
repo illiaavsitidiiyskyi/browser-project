@@ -25,5 +25,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   },
   onLoadingState: (callback: (loading: boolean) => void) => {
     ipcRenderer.on('loading-state', (_event, loading) => callback(loading));
+  },
+  onFocusAddressBar: (callback: () => void) => {
+    ipcRenderer.on('focus-address-bar', () => callback());
   }
 });

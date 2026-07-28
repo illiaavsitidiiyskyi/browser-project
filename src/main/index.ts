@@ -1,4 +1,4 @@
-import { app, BrowserWindow, BrowserView, ipcMain } from 'electron';
+import { app, BrowserWindow, BrowserView, ipcMain, Input } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -93,6 +93,24 @@ function getDefaultUrl(): string {
   return url;
 }
 
+function handleShortcut(input: Input) {
+  if (input.type !== 'keyDown') return;
+  const ctrl = input.control || input.meta;
+  if (!ctrl) return;
+
+  const key = input.key.toLowerCase();
+
+  if (key === 't') {
+    createTab();
+  } else if (key === 'w') {
+    closeTab(activeViewIndex);
+  } else if (key === 'l') {
+    mainWindow.webContents.send('focus-address-bar');
+  } else if (key === 'r') {
+    views[activeViewIndex].webContents.reload();
+  }
+}
+
 function createTab(url?: string) {
   const targetUrl = url || getDefaultUrl();
 
@@ -137,6 +155,10 @@ function createTab(url?: string) {
     if (views[activeViewIndex] === view) {
       mainWindow.webContents.send('loading-state', false);
     }
+  });
+
+  view.webContents.on('before-input-event', (_event, input) => {
+    handleShortcut(input);
   });
 
   sendTabsUpdate();
@@ -218,6 +240,10 @@ function createWindow() {
   });
 
   mainWindow.loadFile('src/renderer/index.html');
+
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    handleShortcut(input);
+  });
 
   loadSettings();
   loadHistory();

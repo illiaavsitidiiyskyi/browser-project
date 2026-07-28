@@ -160,6 +160,11 @@
     window.browserAPI.onLoadingState((loading) => {
       document.getElementById('reload').textContent = loading ? '✕' : '⟳';
     });
+
+    window.browserAPI.onFocusAddressBar(() => {
+      address.focus();
+      address.select();
+    });
   </script>
 </body>
 </html>
