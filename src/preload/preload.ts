@@ -10,11 +10,16 @@ contextBridge.exposeInMainWorld('browserAPI', {
   reload: () => ipcRenderer.send('reload'),
   stopLoading: () => ipcRenderer.send('stop-loading'),
   getHistory: () => ipcRenderer.invoke('get-history'),
+  getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
+  toggleBookmark: () => ipcRenderer.send('toggle-bookmark'),
   onTabsUpdated: (callback: (tabs: any[]) => void) => {
     ipcRenderer.on('tabs-updated', (_event, tabs) => callback(tabs));
   },
   onHistoryUpdated: (callback: () => void) => {
     ipcRenderer.on('history-updated', () => callback());
+  },
+  onBookmarksUpdated: (callback: () => void) => {
+    ipcRenderer.on('bookmarks-updated', () => callback());
   },
   onLoadingState: (callback: (loading: boolean) => void) => {
     ipcRenderer.on('loading-state', (_event, loading) => callback(loading));

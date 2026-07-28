@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bookmarks</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      padding: 24px;
+    }
+    h1 {
+      font-weight: 300;
+    }
+    .entry {
+      padding: 10px 0;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+    }
+    .entry:hover {
+      background: #2a2a2a;
+    }
+    .entry .title {
+      font-size: 14px;
+    }
+    .entry .url {
+      font-size: 12px;
+      color: #999;
+    }
+    .empty {
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bookmarks</h1>
+  <div id="list"></div>
+  <script>
+    function loadBookmarks() {
+      window.browserAPI.getBookmarks().then(bookmarks => {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+
+        if (bookmarks.length === 0) {
+          list.innerHTML = '<div class="empty">No bookmarks yet</div>';
+          return;
+        }
+
+        bookmarks.forEach(entry => {
+          const el = document.createElement('div');
+          el.className = 'entry';
+          el.innerHTML = `
+            <div class="title">${entry.title || entry.url}</div>
+            <div class="url">${entry.url}</div>
+          `;
+          el.addEventListener('click', () => {
+            window.location.href = entry.url;
+          });
+          list.appendChild(el);
+        });
+      });
+    }
+
+    loadBookmarks();
+    window.browserAPI.onBookmarksUpdated(() => loadBookmarks());
+  </script>
+</body>
+</html>

@@ -5,6 +5,9 @@ import * as path from 'path';
 const historyPath = path.join(app.getPath('userData'), 'history.json');
 let history: { url: string; title: string; timestamp: number }[] = [];
 
+const bookmarksPath = path.join(app.getPath('userData'), 'bookmarks.json');
+let bookmarks: { url: string; title: string; timestamp: number }[] = [];
+
 function loadHistory() {
   if (fs.existsSync(historyPath)) {
     history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
@@ -16,13 +19,38 @@ function saveHistory() {
 }
 
 function addHistoryEntry(url: string, title: string) {
-  if (url.includes('start.html') || url.includes('history.html')) return;
+  if (url.includes('start.html') || url.includes('history.html') || url.includes('bookmarks.html')) return;
   history.unshift({ url, title, timestamp: Date.now() });
   saveHistory();
 }
 
 function broadcastHistoryUpdate() {
   views.forEach(v => v.webContents.send('history-updated'));
+}
+
+function loadBookmarks() {
+  if (fs.existsSync(bookmarksPath)) {
+    bookmarks = JSON.parse(fs.readFileSync(bookmarksPath, 'utf-8'));
+  }
+}
+
+function saveBookmarks() {
+  fs.writeFileSync(bookmarksPath, JSON.stringify(bookmarks, null, 2));
+}
+
+function toggleBookmark(url: string, title: string) {
+  const existingIndex = bookmarks.findIndex(b => b.url === url);
+  if (existingIndex >= 0) {
+    bookmarks.splice(existingIndex, 1);
+  } else {
+    bookmarks.unshift({ url, title, timestamp: Date.now() });
+  }
+  saveBookmarks();
+  broadcastBookmarksUpdate();
+}
+
+function broadcastBookmarksUpdate() {
+  views.forEach(v => v.webContents.send('bookmarks-updated'));
 }
 
 let mainWindow: BrowserWindow;
@@ -114,6 +142,7 @@ function sendTabsUpdate() {
     const rawUrl = v.webContents.getURL();
     const isStartPage = rawUrl.includes('start.html');
     const isHistoryPage = rawUrl.includes('history.html');
+    const isBookmarksPage = rawUrl.includes('bookmarks.html');
     let title = v.webContents.getTitle() || rawUrl;
     let url = rawUrl;
 
@@ -123,13 +152,17 @@ function sendTabsUpdate() {
     } else if (isHistoryPage) {
       title = 'History';
       url = '';
+    } else if (isBookmarksPage) {
+      title = 'Bookmarks';
+      url = '';
     }
 
     return {
       index: i,
       url,
       title,
-      active: i === activeViewIndex
+      active: i === activeViewIndex,
+      isBookmarked: bookmarks.some(b => b.url === rawUrl)
     };
   });
   mainWindow.webContents.send('tabs-updated', tabs);
@@ -147,6 +180,7 @@ function createWindow() {
   mainWindow.loadFile('src/renderer/index.html');
 
   loadHistory();
+  loadBookmarks();
   createTab();
 
   mainWindow.on('resize', () => {
@@ -194,6 +228,16 @@ function createWindow() {
 
   ipcMain.handle('get-history', () => {
     return history;
+  });
+
+  ipcMain.handle('get-bookmarks', () => {
+    return bookmarks;
+  });
+
+  ipcMain.on('toggle-bookmark', () => {
+    const wc = views[activeViewIndex].webContents;
+    toggleBookmark(wc.getURL(), wc.getTitle());
+    sendTabsUpdate();
   });
 }
 

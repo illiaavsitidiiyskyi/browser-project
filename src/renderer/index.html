@@ -56,6 +56,9 @@
       font-size: 14px;
       cursor: pointer;
     }
+    #bookmark.active {
+      color: #f5b400;
+    }
     #address {
       flex: 1;
       height: 32px;
@@ -72,6 +75,8 @@
     <button id="back">←</button>
     <button id="forward">→</button>
     <button id="reload">⟳</button>
+    <button id="bookmark">☆</button>
+    <button id="bookmarks-page">★</button>
     <button id="history">☰</button>
     <input id="address" type="text" placeholder="Enter URL" />
   </div>
@@ -79,6 +84,7 @@
     const tabbar = document.getElementById('tabbar');
     const newTabBtn = document.getElementById('new-tab');
     const address = document.getElementById('address');
+    const bookmarkBtn = document.getElementById('bookmark');
 
     newTabBtn.addEventListener('click', () => window.browserAPI.newTab());
 
@@ -96,6 +102,14 @@
 
     document.getElementById('history').addEventListener('click', () => {
       window.browserAPI.navigate('src/renderer/history.html');
+    });
+
+    document.getElementById('bookmarks-page').addEventListener('click', () => {
+      window.browserAPI.navigate('src/renderer/bookmarks.html');
+    });
+
+    bookmarkBtn.addEventListener('click', () => {
+      window.browserAPI.toggleBookmark();
     });
 
     address.addEventListener('keydown', (e) => {
@@ -128,7 +142,11 @@
           window.browserAPI.closeTab(tab.index);
         });
 
-        if (tab.active) address.value = tab.url;
+        if (tab.active) {
+          address.value = tab.url;
+          bookmarkBtn.textContent = tab.isBookmarked ? '★' : '☆';
+          bookmarkBtn.className = tab.isBookmarked ? 'active' : '';
+        }
 
         tabbar.insertBefore(el, newTabBtn);
       });
