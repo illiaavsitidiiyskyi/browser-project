@@ -19,6 +19,10 @@ function createTab(url: string = 'https://www.google.com') {
     sendTabsUpdate();
   });
 
+  view.webContents.on('did-navigate-in-page', () => {
+    sendTabsUpdate();
+  });
+
   sendTabsUpdate();
 }
 
@@ -93,6 +97,20 @@ function createWindow() {
   ipcMain.on('close-tab', (_event, index: number) => {
     closeTab(index);
   });
+
+  ipcMain.on('go-back', () => {
+  const wc = views[activeViewIndex].webContents;
+  if (wc.canGoBack()) wc.goBack();
+});
+
+ipcMain.on('go-forward', () => {
+  const wc = views[activeViewIndex].webContents;
+  if (wc.canGoForward()) wc.goForward();
+});
+
+ipcMain.on('reload', () => {
+  views[activeViewIndex].webContents.reload();
+});
 }
 
 app.whenReady().then(createWindow);
