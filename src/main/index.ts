@@ -1,6 +1,7 @@
 import { app, BrowserView, BrowserWindow, Input, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { setupCertificateVerification } from '../security/certificates';
 import { createIsolatedPartition } from '../security/session-isolation';
 import { BookmarkEntry, toggleBookmark as toggleBookmarkLogic } from './bookmarks-logic';
 import { addHistoryEntry as addHistoryEntryLogic, HistoryEntry } from './history-logic';
@@ -108,6 +109,9 @@ function createTab(url?: string) {
       sandbox: true
     }
   });
+
+  setupCertificateVerification(view.webContents.session, mainWindow);
+  
   views.push(view);
   activeViewIndex = views.length - 1;
 
