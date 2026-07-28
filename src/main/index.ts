@@ -1,8 +1,9 @@
-import { app, BrowserWindow, BrowserView, ipcMain, Input } from 'electron';
+import { app, BrowserView, BrowserWindow, Input, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { HistoryEntry, addHistoryEntry as addHistoryEntryLogic } from './history-logic';
+import { createIsolatedPartition } from '../security/session-isolation';
 import { BookmarkEntry, toggleBookmark as toggleBookmarkLogic } from './bookmarks-logic';
+import { addHistoryEntry as addHistoryEntryLogic, HistoryEntry } from './history-logic';
 
 const historyPath = path.join(app.getPath('userData'), 'history.json');
 let history: HistoryEntry[] = [];
@@ -99,10 +100,12 @@ function handleShortcut(input: Input) {
 
 function createTab(url?: string) {
   const targetUrl = url || getDefaultUrl();
-
+  const tabId = views.length.toString();
   const view = new BrowserView({
     webPreferences: {
-      preload: __dirname + '/../preload/preload.js'
+      preload: __dirname + '/../preload/preload.js',
+      partition: createIsolatedPartition(tabId),
+      sandbox: true
     }
   });
   views.push(view);
