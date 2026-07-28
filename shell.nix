@@ -2,11 +2,11 @@
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.glib
-    pkgs.nss
-    pkgs.gtk3
-    pkgs.xorg.libXScrnSaver
-    pkgs.alsa-lib
     pkgs.nodejs
+    pkgs.electron
   ];
+
+  shellHook = ''
+    export ELECTRON_OVERRIDE_DIST_PATH=${pkgs.electron}/lib/electron
+  '';
 }

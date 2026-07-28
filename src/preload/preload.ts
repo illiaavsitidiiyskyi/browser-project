@@ -1,3 +1,5 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
-contextBridge.exposeInMainWorld('browserAPI', {});
+contextBridge.exposeInMainWorld('browserAPI', {
+  navigate: (url: string) => ipcRenderer.send('navigate', url)
+});
