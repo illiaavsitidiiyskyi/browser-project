@@ -1,12 +1,14 @@
 import { app, BrowserWindow, BrowserView, ipcMain, Input } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { HistoryEntry, addHistoryEntry as addHistoryEntryLogic } from './history-logic';
+import { BookmarkEntry, toggleBookmark as toggleBookmarkLogic } from './bookmarks-logic';
 
 const historyPath = path.join(app.getPath('userData'), 'history.json');
-let history: { url: string; title: string; timestamp: number }[] = [];
+let history: HistoryEntry[] = [];
 
 const bookmarksPath = path.join(app.getPath('userData'), 'bookmarks.json');
-let bookmarks: { url: string; title: string; timestamp: number }[] = [];
+let bookmarks: BookmarkEntry[] = [];
 
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settings: { homepage: string | null } = { homepage: null };
@@ -32,18 +34,7 @@ function saveHistory() {
 }
 
 function addHistoryEntry(url: string, title: string) {
-  if (url.includes('start.html') || url.includes('history.html') || url.includes('bookmarks.html') || url.includes('settings.html')) return;
-
-  const last = history[0];
-  const DEDUPE_WINDOW_MS = 60 * 1000;
-  if (last && last.url === url && Date.now() - last.timestamp < DEDUPE_WINDOW_MS) {
-    last.timestamp = Date.now();
-    last.title = title;
-    saveHistory();
-    return;
-  }
-
-  history.unshift({ url, title, timestamp: Date.now() });
+  history = addHistoryEntryLogic(history, url, title);
   saveHistory();
 }
 
@@ -62,12 +53,7 @@ function saveBookmarks() {
 }
 
 function toggleBookmark(url: string, title: string) {
-  const existingIndex = bookmarks.findIndex(b => b.url === url);
-  if (existingIndex >= 0) {
-    bookmarks.splice(existingIndex, 1);
-  } else {
-    bookmarks.unshift({ url, title, timestamp: Date.now() });
-  }
+  bookmarks = toggleBookmarkLogic(bookmarks, url, title);
   saveBookmarks();
   broadcastBookmarksUpdate();
 }
