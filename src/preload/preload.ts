@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   getHistory: () => ipcRenderer.invoke('get-history'),
   getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
   toggleBookmark: () => ipcRenderer.send('toggle-bookmark'),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings: { homepage: string | null }) => ipcRenderer.send('save-settings', settings),
   onTabsUpdated: (callback: (tabs: any[]) => void) => {
     ipcRenderer.on('tabs-updated', (_event, tabs) => callback(tabs));
   },

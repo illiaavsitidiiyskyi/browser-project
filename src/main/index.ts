@@ -8,6 +8,19 @@ let history: { url: string; title: string; timestamp: number }[] = [];
 const bookmarksPath = path.join(app.getPath('userData'), 'bookmarks.json');
 let bookmarks: { url: string; title: string; timestamp: number }[] = [];
 
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+let settings: { homepage: string | null } = { homepage: null };
+
+function loadSettings() {
+  if (fs.existsSync(settingsPath)) {
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+  }
+}
+
+function saveSettings() {
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+}
+
 function loadHistory() {
   if (fs.existsSync(historyPath)) {
     history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
@@ -19,7 +32,7 @@ function saveHistory() {
 }
 
 function addHistoryEntry(url: string, title: string) {
-  if (url.includes('start.html') || url.includes('history.html') || url.includes('bookmarks.html')) return;
+  if (url.includes('start.html') || url.includes('history.html') || url.includes('bookmarks.html') || url.includes('settings.html')) return;
 
   const last = history[0];
   const DEDUPE_WINDOW_MS = 60 * 1000;
@@ -69,7 +82,20 @@ let activeViewIndex = 0;
 
 const TOOLBAR_HEIGHT = 80;
 
-function createTab(url: string = 'src/renderer/start.html') {
+function getDefaultUrl(): string {
+  if (!settings.homepage || settings.homepage.trim() === '') {
+    return 'src/renderer/start.html';
+  }
+  let url = settings.homepage.trim();
+  if (!url.startsWith('http')) {
+    url = 'https://' + url;
+  }
+  return url;
+}
+
+function createTab(url?: string) {
+  const targetUrl = url || getDefaultUrl();
+
   const view = new BrowserView({
     webPreferences: {
       preload: __dirname + '/../preload/preload.js'
@@ -78,10 +104,10 @@ function createTab(url: string = 'src/renderer/start.html') {
   views.push(view);
   activeViewIndex = views.length - 1;
 
-  if (url.endsWith('.html')) {
-    view.webContents.loadFile(url);
+  if (targetUrl.endsWith('.html')) {
+    view.webContents.loadFile(targetUrl);
   } else {
-    view.webContents.loadURL(url);
+    view.webContents.loadURL(targetUrl);
   }
 
   mainWindow.setBrowserView(view);
@@ -153,6 +179,7 @@ function sendTabsUpdate() {
     const isStartPage = rawUrl.includes('start.html');
     const isHistoryPage = rawUrl.includes('history.html');
     const isBookmarksPage = rawUrl.includes('bookmarks.html');
+    const isSettingsPage = rawUrl.includes('settings.html');
     let title = v.webContents.getTitle() || rawUrl;
     let url = rawUrl;
 
@@ -164,6 +191,9 @@ function sendTabsUpdate() {
       url = '';
     } else if (isBookmarksPage) {
       title = 'Bookmarks';
+      url = '';
+    } else if (isSettingsPage) {
+      title = 'Settings';
       url = '';
     }
 
@@ -189,6 +219,7 @@ function createWindow() {
 
   mainWindow.loadFile('src/renderer/index.html');
 
+  loadSettings();
   loadHistory();
   loadBookmarks();
   createTab();
@@ -248,6 +279,15 @@ function createWindow() {
     const wc = views[activeViewIndex].webContents;
     toggleBookmark(wc.getURL(), wc.getTitle());
     sendTabsUpdate();
+  });
+
+  ipcMain.handle('get-settings', () => {
+    return settings;
+  });
+
+  ipcMain.on('save-settings', (_event, newSettings: { homepage: string | null }) => {
+    settings = newSettings;
+    saveSettings();
   });
 }
 
