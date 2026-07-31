@@ -12,6 +12,7 @@
       padding: 0 4px;
       gap: 4px;
       box-sizing: border-box;
+      position: relative;
     }
     .tab {
       display: flex;
@@ -23,10 +24,18 @@
       font-size: 12px;
       cursor: pointer;
       max-width: 160px;
+      user-select: none;
+      touch-action: none;
     }
     .tab.active {
       background: white;
       font-weight: bold;
+    }
+    .tab.dragging {
+      opacity: 0.4;
+    }
+    .tab.drag-over {
+      border-left: 2px solid #3a7bd5;
     }
     .tab span.title {
       overflow: hidden;
@@ -87,6 +96,11 @@
     const address = document.getElementById('address');
     const bookmarkBtn = document.getElementById('bookmark');
 
+    let draggedIndex = null;
+    let isDragging = false;
+    let dragStartX = 0;
+    const DRAG_THRESHOLD = 5;
+
     newTabBtn.addEventListener('click', () => window.browserAPI.newTab());
 
     document.getElementById('back').addEventListener('click', () => window.browserAPI.goBack());
@@ -130,16 +144,71 @@
       }
     });
 
+    function getTabIndexAtPoint(x, y) {
+      const tabs = Array.from(document.querySelectorAll('.tab'));
+      for (const t of tabs) {
+        const rect = t.getBoundingClientRect();
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          return parseInt(t.dataset.index, 10);
+        }
+      }
+      return null;
+    }
+
     window.browserAPI.onTabsUpdated((tabs) => {
       document.querySelectorAll('.tab').forEach(el => el.remove());
 
       tabs.forEach(tab => {
         const el = document.createElement('div');
         el.className = 'tab' + (tab.active ? ' active' : '');
+        el.dataset.index = tab.index;
         el.innerHTML = `<span class="title">${tab.title}</span><span class="close">x</span>`;
 
-        el.querySelector('.title').addEventListener('click', () => {
-          window.browserAPI.switchTab(tab.index);
+        el.addEventListener('pointerdown', (e) => {
+          if (e.target.closest('.close')) return;
+          draggedIndex = tab.index;
+          dragStartX = e.clientX;
+          isDragging = false;
+          el.setPointerCapture(e.pointerId);
+        });
+
+        el.addEventListener('pointermove', (e) => {
+          if (draggedIndex === null || draggedIndex !== tab.index) return;
+
+          if (!isDragging && Math.abs(e.clientX - dragStartX) > DRAG_THRESHOLD) {
+            isDragging = true;
+            el.classList.add('dragging');
+          }
+
+          if (isDragging) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+            const overIndex = getTabIndexAtPoint(e.clientX, e.clientY);
+            if (overIndex !== null && overIndex !== draggedIndex) {
+              const overEl = document.querySelector(`.tab[data-index="${overIndex}"]`);
+              if (overEl) overEl.classList.add('drag-over');
+            }
+          }
+        });
+
+        el.addEventListener('pointerup', (e) => {
+          if (draggedIndex === null || draggedIndex !== tab.index) return;
+
+          if (isDragging) {
+            const dropIndex = getTabIndexAtPoint(e.clientX, e.clientY);
+            if (dropIndex !== null && dropIndex !== draggedIndex) {
+              window.browserAPI.reorderTabs(draggedIndex, dropIndex);
+            }
+          } else {
+            window.browserAPI.switchTab(tab.index);
+          }
+
+          document.querySelectorAll('.tab').forEach(t => {
+            t.classList.remove('dragging');
+            t.classList.remove('drag-over');
+          });
+
+          draggedIndex = null;
+          isDragging = false;
         });
 
         el.querySelector('.close').addEventListener('click', (e) => {
@@ -159,11 +228,6 @@
 
     window.browserAPI.onLoadingState((loading) => {
       document.getElementById('reload').textContent = loading ? '✕' : '⟳';
-    });
-
-    window.browserAPI.onFocusAddressBar(() => {
-      address.focus();
-      address.select();
     });
   </script>
 </body>
