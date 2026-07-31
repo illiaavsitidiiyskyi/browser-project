@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('browserAPI', {
   toggleBookmark: () => ipcRenderer.send('toggle-bookmark'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: { homepage: string | null }) => ipcRenderer.send('save-settings', settings),
+  toggleTheme: () => ipcRenderer.send('toggle-theme'),
   onTabsUpdated: (callback: (tabs: any[]) => void) => {
     ipcRenderer.on('tabs-updated', (_event, tabs) => callback(tabs));
   },
@@ -29,5 +30,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   },
   onFocusAddressBar: (callback: () => void) => {
     ipcRenderer.on('focus-address-bar', () => callback());
+  },
+  onThemeUpdated: (callback: (theme: 'light' | 'dark') => void) => {
+    ipcRenderer.on('theme-updated', (_event, theme) => callback(theme));
   }
 });
