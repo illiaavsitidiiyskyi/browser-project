@@ -14,11 +14,11 @@ const bookmarksPath = path.join(app.getPath('userData'), 'bookmarks.json');
 let bookmarks: BookmarkEntry[] = [];
 
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-let settings: { homepage: string | null } = { homepage: null };
+let settings: { homepage: string | null; theme: 'light' | 'dark' } = { homepage: null, theme: 'light' };
 
 function loadSettings() {
   if (fs.existsSync(settingsPath)) {
-    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) };
   }
 }
 
@@ -63,6 +63,11 @@ function toggleBookmark(url: string, title: string) {
 
 function broadcastBookmarksUpdate() {
   views.forEach(v => v.webContents.send('bookmarks-updated'));
+}
+
+function broadcastThemeUpdate() {
+  mainWindow.webContents.send('theme-updated', settings.theme);
+  views.forEach(v => v.webContents.send('theme-updated', settings.theme));
 }
 
 let mainWindow: BrowserWindow;
@@ -270,7 +275,6 @@ function createWindow() {
     resizeActiveView();
   });
 
-
   ipcMain.on('navigate', (_event, url: string) => {
     const wc = views[activeViewIndex].webContents;
     if (url.endsWith('.html')) {
@@ -333,8 +337,14 @@ function createWindow() {
   });
 
   ipcMain.on('save-settings', (_event, newSettings: { homepage: string | null }) => {
-    settings = newSettings;
+    settings = { ...settings, ...newSettings };
     saveSettings();
+  });
+
+  ipcMain.on('toggle-theme', () => {
+    settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+    saveSettings();
+    broadcastThemeUpdate();
   });
 }
 

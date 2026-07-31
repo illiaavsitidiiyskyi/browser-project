@@ -3,12 +3,35 @@
 <head>
   <title>Browser</title>
   <style>
-    body { margin: 0; padding: 0; font-family: sans-serif; }
+    :root {
+      --bg-tabbar: #ddd;
+      --bg-tab: #f5f5f5;
+      --bg-tab-active: white;
+      --bg-toolbar: #f0f0f0;
+      --text-color: #222;
+      --bg-address: white;
+      --border-color: #ccc;
+    }
+    :root[data-theme="dark"] {
+      --bg-tabbar: #2a2a2a;
+      --bg-tab: #333;
+      --bg-tab-active: #444;
+      --bg-toolbar: #262626;
+      --text-color: #eee;
+      --bg-address: #333;
+      --border-color: #444;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: var(--bg-toolbar);
+    }
     #tabbar {
       height: 36px;
       display: flex;
       align-items: center;
-      background: #ddd;
+      background: var(--bg-tabbar);
       padding: 0 4px;
       gap: 4px;
       box-sizing: border-box;
@@ -19,7 +42,8 @@
       align-items: center;
       gap: 6px;
       padding: 6px 10px;
-      background: #f5f5f5;
+      background: var(--bg-tab);
+      color: var(--text-color);
       border-radius: 6px 6px 0 0;
       font-size: 12px;
       cursor: pointer;
@@ -28,7 +52,7 @@
       touch-action: none;
     }
     .tab.active {
-      background: white;
+      background: var(--bg-tab-active);
       font-weight: bold;
     }
     .tab.dragging {
@@ -49,13 +73,14 @@
       cursor: pointer;
       padding: 4px 10px;
       font-size: 16px;
+      color: var(--text-color);
     }
     #toolbar {
       height: 44px;
       display: flex;
       align-items: center;
       padding: 0 12px;
-      background: #f0f0f0;
+      background: var(--bg-toolbar);
       box-sizing: border-box;
       gap: 6px;
     }
@@ -64,6 +89,10 @@
       width: 30px;
       font-size: 14px;
       cursor: pointer;
+      background: var(--bg-address);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
     }
     #bookmark.active {
       color: #f5b400;
@@ -73,6 +102,10 @@
       height: 32px;
       font-size: 14px;
       padding: 0 10px;
+      background: var(--bg-address);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -81,13 +114,14 @@
     <div id="new-tab">+</div>
   </div>
   <div id="toolbar">
-    <button id="back">←</button>
-    <button id="forward">→</button>
-    <button id="reload">⟳</button>
-    <button id="bookmark">☆</button>
-    <button id="bookmarks-page">★</button>
-    <button id="history">☰</button>
-    <button id="settings">⚙</button>
+    <button id="back" title="Back">←</button>
+    <button id="forward" title="Forward">→</button>
+    <button id="reload" title="Reload">⟳</button>
+    <button id="bookmark" title="Bookmark this page">☆</button>
+    <button id="bookmarks-page" title="Open Bookmarks">★</button>
+    <button id="history" title="Open History">☰</button>
+    <button id="theme-toggle" title="Toggle theme">🌙</button>
+    <button id="settings" title="Open Settings">⚙</button>
     <input id="address" type="text" placeholder="Enter URL" />
   </div>
   <script>
@@ -95,11 +129,29 @@
     const newTabBtn = document.getElementById('new-tab');
     const address = document.getElementById('address');
     const bookmarkBtn = document.getElementById('bookmark');
+    const themeToggleBtn = document.getElementById('theme-toggle');
 
     let draggedIndex = null;
     let isDragging = false;
     let dragStartX = 0;
     const DRAG_THRESHOLD = 5;
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      themeToggleBtn.textContent = theme === 'dark' ? '☀' : '🌙';
+    }
+
+    window.browserAPI.getSettings().then(settings => {
+      applyTheme(settings.theme || 'light');
+    });
+
+    window.browserAPI.onThemeUpdated((theme) => {
+      applyTheme(theme);
+    });
+
+    themeToggleBtn.addEventListener('click', () => {
+      window.browserAPI.toggleTheme();
+    });
 
     newTabBtn.addEventListener('click', () => window.browserAPI.newTab());
 

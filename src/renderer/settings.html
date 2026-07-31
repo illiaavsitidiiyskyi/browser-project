@@ -3,11 +3,25 @@
 <head>
   <title>Settings</title>
   <style>
+    :root {
+      --bg: #1e1e1e;
+      --text: #eee;
+      --muted: #999;
+      --input-bg: #2a2a2a;
+      --border: #444;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --text: #222;
+      --muted: #666;
+      --input-bg: #f5f5f5;
+      --border: #ccc;
+    }
     body {
       margin: 0;
       font-family: sans-serif;
-      background: #1e1e1e;
-      color: #eee;
+      background: var(--bg);
+      color: var(--text);
       padding: 24px;
     }
     h1 {
@@ -19,7 +33,7 @@
     label {
       display: block;
       font-size: 13px;
-      color: #999;
+      color: var(--muted);
       margin-bottom: 6px;
     }
     input {
@@ -27,9 +41,9 @@
       height: 36px;
       font-size: 14px;
       padding: 0 10px;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      color: #eee;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
       border-radius: 4px;
     }
     button {
@@ -63,6 +77,11 @@
   <script>
     window.browserAPI.getSettings().then(settings => {
       document.getElementById('homepage').value = settings.homepage || '';
+      document.documentElement.setAttribute('data-theme', settings.theme || 'light');
+    });
+
+    window.browserAPI.onThemeUpdated((theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
     });
 
     document.getElementById('save').addEventListener('click', () => {

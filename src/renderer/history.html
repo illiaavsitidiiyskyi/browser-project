@@ -3,11 +3,25 @@
 <head>
   <title>History</title>
   <style>
+    :root {
+      --bg: #1e1e1e;
+      --text: #eee;
+      --muted: #999;
+      --border: #333;
+      --hover: #2a2a2a;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --text: #222;
+      --muted: #666;
+      --border: #ddd;
+      --hover: #f5f5f5;
+    }
     body {
       margin: 0;
       font-family: sans-serif;
-      background: #1e1e1e;
-      color: #eee;
+      background: var(--bg);
+      color: var(--text);
       padding: 24px;
     }
     h1 {
@@ -15,22 +29,22 @@
     }
     .entry {
       padding: 10px 0;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid var(--border);
       cursor: pointer;
     }
     .entry:hover {
-      background: #2a2a2a;
+      background: var(--hover);
     }
     .entry .title {
       font-size: 14px;
     }
     .entry .url {
       font-size: 12px;
-      color: #999;
+      color: var(--muted);
     }
     .entry .time {
       font-size: 11px;
-      color: #666;
+      color: var(--muted);
       float: right;
     }
   </style>
@@ -39,6 +53,14 @@
   <h1>History</h1>
   <div id="list"></div>
   <script>
+    window.browserAPI.getSettings().then(settings => {
+      document.documentElement.setAttribute('data-theme', settings.theme || 'light');
+    });
+
+    window.browserAPI.onThemeUpdated((theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+    });
+
     function loadHistory() {
       window.browserAPI.getHistory().then(history => {
         const list = document.getElementById('list');

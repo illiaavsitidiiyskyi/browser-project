@@ -3,20 +3,32 @@
 <head>
   <title>New Tab</title>
   <style>
+    :root {
+      --bg: #1e1e1e;
+      --text: #eee;
+      --input-bg: white;
+      --input-text: #222;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --text: #222;
+      --input-bg: #f0f0f0;
+      --input-text: #222;
+    }
     body {
       margin: 0;
       height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #1e1e1e;
+      background: var(--bg);
       font-family: sans-serif;
     }
     #center {
       text-align: center;
     }
     h1 {
-      color: #eee;
+      color: var(--text);
       font-weight: 300;
       font-size: 32px;
       margin-bottom: 24px;
@@ -29,6 +41,8 @@
       border-radius: 22px;
       border: none;
       outline: none;
+      background: var(--input-bg);
+      color: var(--input-text);
     }
   </style>
 </head>
@@ -38,6 +52,14 @@
     <input id="search" type="text" placeholder="Search or enter address" autofocus />
   </div>
   <script>
+    window.browserAPI.getSettings().then(settings => {
+      document.documentElement.setAttribute('data-theme', settings.theme || 'light');
+    });
+
+    window.browserAPI.onThemeUpdated((theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+    });
+
     const input = document.getElementById('search');
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
