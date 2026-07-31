@@ -110,7 +110,7 @@ async function createTab(url?: string) {
       sandbox: true
     }
   });
-  
+
   setupCertificateVerification(view.webContents.session, mainWindow);
   await setupAdblock(view.webContents.session);
 
@@ -193,6 +193,24 @@ function closeTab(index: number) {
   switchTab(activeViewIndex);
 }
 
+function reorderTabs(fromIndex: number, toIndex: number) {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 || fromIndex >= views.length ||
+    toIndex < 0 || toIndex >= views.length
+  ) {
+    return;
+  }
+
+  const wasActiveView = views[activeViewIndex];
+
+  const [moved] = views.splice(fromIndex, 1);
+  views.splice(toIndex, 0, moved);
+
+  activeViewIndex = views.indexOf(wasActiveView);
+  sendTabsUpdate();
+}
+
 function sendTabsUpdate() {
   const tabs = views.map((v, i) => {
     const rawUrl = v.webContents.getURL();
@@ -252,6 +270,7 @@ function createWindow() {
     resizeActiveView();
   });
 
+
   ipcMain.on('navigate', (_event, url: string) => {
     const wc = views[activeViewIndex].webContents;
     if (url.endsWith('.html')) {
@@ -271,6 +290,10 @@ function createWindow() {
 
   ipcMain.on('close-tab', (_event, index: number) => {
     closeTab(index);
+  });
+
+  ipcMain.on('reorder-tabs', (_event, fromIndex: number, toIndex: number) => {
+    reorderTabs(fromIndex, toIndex);
   });
 
   ipcMain.on('go-back', () => {
