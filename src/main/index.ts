@@ -16,6 +16,8 @@ let bookmarks: BookmarkEntry[] = [];
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settings: { homepage: string | null; theme: 'light' | 'dark' } = { homepage: null, theme: 'light' };
 
+const sessionPath = path.join(app.getPath('userData'), 'session.json');
+
 function loadSettings() {
   if (fs.existsSync(settingsPath)) {
     settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) };
@@ -68,6 +70,34 @@ function broadcastBookmarksUpdate() {
 function broadcastThemeUpdate() {
   mainWindow.webContents.send('theme-updated', settings.theme);
   views.forEach(v => v.webContents.send('theme-updated', settings.theme));
+}
+
+function toRestorableUrl(rawUrl: string): string {
+  const marker = 'src/renderer/';
+  const idx = rawUrl.indexOf(marker);
+  if (idx !== -1) {
+    return rawUrl.slice(idx);
+  }
+  return rawUrl;
+}
+
+function saveSession() {
+  const tabUrls = views.map(v => toRestorableUrl(v.webContents.getURL())).filter(u => u);
+  fs.writeFileSync(sessionPath, JSON.stringify(tabUrls, null, 2));
+}
+
+function loadSession(): string[] {
+  if (fs.existsSync(sessionPath)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+      if (Array.isArray(saved) && saved.length > 0) {
+        return saved;
+      }
+    } catch {
+      // ignore corrupt session file, fall back to default
+    }
+  }
+  return [];
 }
 
 let mainWindow: BrowserWindow;
@@ -249,9 +279,10 @@ function sendTabsUpdate() {
     };
   });
   mainWindow.webContents.send('tabs-updated', tabs);
+  saveSession();
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -269,7 +300,17 @@ function createWindow() {
   loadSettings();
   loadHistory();
   loadBookmarks();
-  createTab();
+
+  const savedTabs = loadSession();
+  if (savedTabs.length > 0) {
+    for (const url of savedTabs) {
+      await createTab(url);
+    }
+    activeViewIndex = views.length - 1;
+    switchTab(activeViewIndex);
+  } else {
+    createTab();
+  }
 
   mainWindow.on('resize', () => {
     resizeActiveView();
