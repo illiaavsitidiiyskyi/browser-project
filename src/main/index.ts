@@ -16,6 +16,10 @@ let bookmarks: BookmarkEntry[] = [];
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settings: { homepage: string | null; theme: 'light' | 'dark' } = { homepage: null, theme: 'light' };
 
+const sessionPath = path.join(app.getPath('userData'), 'session.json');
+
+const privateViews = new Set<BrowserView>();
+
 function loadSettings() {
   if (fs.existsSync(settingsPath)) {
     settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) };
@@ -70,6 +74,37 @@ function broadcastThemeUpdate() {
   views.forEach(v => v.webContents.send('theme-updated', settings.theme));
 }
 
+function toRestorableUrl(rawUrl: string): string {
+  const marker = 'src/renderer/';
+  const idx = rawUrl.indexOf(marker);
+  if (idx !== -1) {
+    return rawUrl.slice(idx);
+  }
+  return rawUrl;
+}
+
+function saveSession() {
+  const tabUrls = views
+    .filter(v => !privateViews.has(v))
+    .map(v => toRestorableUrl(v.webContents.getURL()))
+    .filter(u => u);
+  fs.writeFileSync(sessionPath, JSON.stringify(tabUrls, null, 2));
+}
+
+function loadSession(): string[] {
+  if (fs.existsSync(sessionPath)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+      if (Array.isArray(saved) && saved.length > 0) {
+        return saved;
+      }
+    } catch {
+      // ignore corrupt session file, fall back to default
+    }
+  }
+  return [];
+}
+
 let mainWindow: BrowserWindow;
 let views: BrowserView[] = [];
 let activeViewIndex = 0;
@@ -94,7 +129,9 @@ function handleShortcut(input: Input) {
 
   const key = input.key.toLowerCase();
 
-  if (key === 't') {
+  if (key === 't' && input.shift) {
+    createTab(undefined, true);
+  } else if (key === 't') {
     createTab();
   } else if (key === 'w') {
     closeTab(activeViewIndex);
@@ -105,16 +142,23 @@ function handleShortcut(input: Input) {
   }
 }
 
-async function createTab(url?: string) {
+async function createTab(url?: string, isPrivate: boolean = false) {
   const targetUrl = url || getDefaultUrl();
-  const tabId = views.length.toString();
+  const partition = isPrivate
+    ? `incognito-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    : createIsolatedPartition(views.length.toString());
+
   const view = new BrowserView({
     webPreferences: {
       preload: __dirname + '/../preload/preload.js',
-      partition: createIsolatedPartition(tabId),
+      partition,
       sandbox: true
     }
   });
+
+  if (isPrivate) {
+    privateViews.add(view);
+  }
 
   setupCertificateVerification(view.webContents.session, mainWindow);
   await setupAdblock(view.webContents.session);
@@ -132,9 +176,11 @@ async function createTab(url?: string) {
   resizeActiveView();
 
   view.webContents.on('did-navigate', () => {
-    addHistoryEntry(view.webContents.getURL(), view.webContents.getTitle());
+    if (!privateViews.has(view)) {
+      addHistoryEntry(view.webContents.getURL(), view.webContents.getTitle());
+      broadcastHistoryUpdate();
+    }
     sendTabsUpdate();
-    broadcastHistoryUpdate();
   });
 
   view.webContents.on('did-navigate-in-page', () => {
@@ -186,7 +232,9 @@ function switchTab(index: number) {
 }
 
 function closeTab(index: number) {
-  views[index].webContents.close();
+  const view = views[index];
+  view.webContents.close();
+  privateViews.delete(view);
   views.splice(index, 1);
 
   if (views.length === 0) {
@@ -245,13 +293,15 @@ function sendTabsUpdate() {
       url,
       title,
       active: i === activeViewIndex,
-      isBookmarked: bookmarks.some(b => b.url === rawUrl)
+      isBookmarked: bookmarks.some(b => b.url === rawUrl),
+      isPrivate: privateViews.has(v)
     };
   });
   mainWindow.webContents.send('tabs-updated', tabs);
+  saveSession();
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -269,7 +319,17 @@ function createWindow() {
   loadSettings();
   loadHistory();
   loadBookmarks();
-  createTab();
+
+  const savedTabs = loadSession();
+  if (savedTabs.length > 0) {
+    for (const url of savedTabs) {
+      await createTab(url);
+    }
+    activeViewIndex = views.length - 1;
+    switchTab(activeViewIndex);
+  } else {
+    createTab();
+  }
 
   mainWindow.on('resize', () => {
     resizeActiveView();
@@ -286,6 +346,10 @@ function createWindow() {
 
   ipcMain.on('new-tab', () => {
     createTab();
+  });
+
+  ipcMain.on('new-private-tab', () => {
+    createTab(undefined, true);
   });
 
   ipcMain.on('switch-tab', (_event, index: number) => {
