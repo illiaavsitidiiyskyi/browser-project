@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('browserAPI', {
   navigate: (url: string) => ipcRenderer.send('navigate', url),
   newTab: () => ipcRenderer.send('new-tab'),
+  newPrivateTab: () => ipcRenderer.send('new-private-tab'),
   switchTab: (index: number) => ipcRenderer.send('switch-tab', index),
   closeTab: (index: number) => ipcRenderer.send('close-tab', index),
   reorderTabs: (fromIndex: number, toIndex: number) => ipcRenderer.send('reorder-tabs', fromIndex, toIndex),

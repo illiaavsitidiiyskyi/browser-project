@@ -18,6 +18,8 @@ let settings: { homepage: string | null; theme: 'light' | 'dark' } = { homepage:
 
 const sessionPath = path.join(app.getPath('userData'), 'session.json');
 
+const privateViews = new Set<BrowserView>();
+
 function loadSettings() {
   if (fs.existsSync(settingsPath)) {
     settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) };
@@ -82,7 +84,10 @@ function toRestorableUrl(rawUrl: string): string {
 }
 
 function saveSession() {
-  const tabUrls = views.map(v => toRestorableUrl(v.webContents.getURL())).filter(u => u);
+  const tabUrls = views
+    .filter(v => !privateViews.has(v))
+    .map(v => toRestorableUrl(v.webContents.getURL()))
+    .filter(u => u);
   fs.writeFileSync(sessionPath, JSON.stringify(tabUrls, null, 2));
 }
 
@@ -124,7 +129,9 @@ function handleShortcut(input: Input) {
 
   const key = input.key.toLowerCase();
 
-  if (key === 't') {
+  if (key === 't' && input.shift) {
+    createTab(undefined, true);
+  } else if (key === 't') {
     createTab();
   } else if (key === 'w') {
     closeTab(activeViewIndex);
@@ -135,16 +142,23 @@ function handleShortcut(input: Input) {
   }
 }
 
-async function createTab(url?: string) {
+async function createTab(url?: string, isPrivate: boolean = false) {
   const targetUrl = url || getDefaultUrl();
-  const tabId = views.length.toString();
+  const partition = isPrivate
+    ? `incognito-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    : createIsolatedPartition(views.length.toString());
+
   const view = new BrowserView({
     webPreferences: {
       preload: __dirname + '/../preload/preload.js',
-      partition: createIsolatedPartition(tabId),
+      partition,
       sandbox: true
     }
   });
+
+  if (isPrivate) {
+    privateViews.add(view);
+  }
 
   setupCertificateVerification(view.webContents.session, mainWindow);
   await setupAdblock(view.webContents.session);
@@ -162,9 +176,11 @@ async function createTab(url?: string) {
   resizeActiveView();
 
   view.webContents.on('did-navigate', () => {
-    addHistoryEntry(view.webContents.getURL(), view.webContents.getTitle());
+    if (!privateViews.has(view)) {
+      addHistoryEntry(view.webContents.getURL(), view.webContents.getTitle());
+      broadcastHistoryUpdate();
+    }
     sendTabsUpdate();
-    broadcastHistoryUpdate();
   });
 
   view.webContents.on('did-navigate-in-page', () => {
@@ -216,7 +232,9 @@ function switchTab(index: number) {
 }
 
 function closeTab(index: number) {
-  views[index].webContents.close();
+  const view = views[index];
+  view.webContents.close();
+  privateViews.delete(view);
   views.splice(index, 1);
 
   if (views.length === 0) {
@@ -275,7 +293,8 @@ function sendTabsUpdate() {
       url,
       title,
       active: i === activeViewIndex,
-      isBookmarked: bookmarks.some(b => b.url === rawUrl)
+      isBookmarked: bookmarks.some(b => b.url === rawUrl),
+      isPrivate: privateViews.has(v)
     };
   });
   mainWindow.webContents.send('tabs-updated', tabs);
@@ -327,6 +346,10 @@ async function createWindow() {
 
   ipcMain.on('new-tab', () => {
     createTab();
+  });
+
+  ipcMain.on('new-private-tab', () => {
+    createTab(undefined, true);
   });
 
   ipcMain.on('switch-tab', (_event, index: number) => {

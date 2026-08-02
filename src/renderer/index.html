@@ -55,6 +55,13 @@
       background: var(--bg-tab-active);
       font-weight: bold;
     }
+    .tab.private {
+      background: #4a2f6b;
+      color: #eee;
+    }
+    .tab.private.active {
+      background: #6b3fa0;
+    }
     .tab.dragging {
       opacity: 0.4;
     }
@@ -73,6 +80,12 @@
       cursor: pointer;
       padding: 4px 10px;
       font-size: 16px;
+      color: var(--text-color);
+    }
+    #new-private-tab {
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 14px;
       color: var(--text-color);
     }
     #toolbar {
@@ -111,7 +124,8 @@
 </head>
 <body>
   <div id="tabbar">
-    <div id="new-tab">+</div>
+    <div id="new-tab" title="New Tab">+</div>
+    <div id="new-private-tab" title="New Private Tab">🕵</div>
   </div>
   <div id="toolbar">
     <button id="back" title="Back">←</button>
@@ -127,6 +141,7 @@
   <script>
     const tabbar = document.getElementById('tabbar');
     const newTabBtn = document.getElementById('new-tab');
+    const newPrivateTabBtn = document.getElementById('new-private-tab');
     const address = document.getElementById('address');
     const bookmarkBtn = document.getElementById('bookmark');
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -154,6 +169,7 @@
     });
 
     newTabBtn.addEventListener('click', () => window.browserAPI.newTab());
+    newPrivateTabBtn.addEventListener('click', () => window.browserAPI.newPrivateTab());
 
     document.getElementById('back').addEventListener('click', () => window.browserAPI.goBack());
     document.getElementById('forward').addEventListener('click', () => window.browserAPI.goForward());
@@ -212,9 +228,10 @@
 
       tabs.forEach(tab => {
         const el = document.createElement('div');
-        el.className = 'tab' + (tab.active ? ' active' : '');
+        el.className = 'tab' + (tab.active ? ' active' : '') + (tab.isPrivate ? ' private' : '');
         el.dataset.index = tab.index;
-        el.innerHTML = `<span class="title">${tab.title}</span><span class="close">x</span>`;
+        const prefix = tab.isPrivate ? '🕵 ' : '';
+        el.innerHTML = `<span class="title">${prefix}${tab.title}</span><span class="close">x</span>`;
 
         el.addEventListener('pointerdown', (e) => {
           if (e.target.closest('.close')) return;
